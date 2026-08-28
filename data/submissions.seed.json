@@ -1,0 +1,362 @@
+[
+  {
+    "id": "demo-finance-ap-invoices",
+    "createdAt": "2026-08-20T09:15:00.000Z",
+    "answers": {
+      "Q1": "Sarah Chen",
+      "Q2": "sarah.chen@meridianparts.co.uk",
+      "Q3": "Yes, I do it regularly",
+      "Q4": "",
+      "Q5": "Finance / accounts",
+      "Q6": "Supplier invoice entry and PO matching",
+      "Q7": "I process supplier invoices from email, check them against purchase orders in Excel, then enter approved invoices into Xero.",
+      "Q8": "Checking or validating numbers / figures",
+      "Q9": "Two systems or spreadsheets that should agree (e.g. invoice vs PO)",
+      "Q10": "Helped by Excel macros / templates",
+      "Q11": "Many times a day",
+      "Q12": "15-25",
+      "Q13": "15–30 min",
+      "Q14": "Almost all doing",
+      "Q15": "2–3",
+      "Q16": "Busy at week/month/quarter end",
+      "Q17": [
+        "Deadlines slip",
+        "More mistakes",
+        "People work overtime"
+      ],
+      "Q18": "About 1–2 days",
+      "Q19": "An email arrives",
+      "Q20": [
+        "Invoice arrives by email as PDF attachment",
+        "Open PDF and find PO number, amount, and supplier",
+        "Look up PO in Excel tracker and check amounts match",
+        "Enter invoice details into Xero accounting system",
+        "Save PDF to shared finance folder and mark PO as invoiced"
+      ],
+      "Q21": [
+        "Excel / Google Sheets",
+        "Email",
+        "Word / Docs / PDFs",
+        "Accounting / finance system",
+        "Shared folder / SharePoint / Drive"
+      ],
+      "Q22": "A record updated in a system",
+      "Q23": "Finance manager reviews Xero for payment run",
+      "Q24": "Yes, same steps almost always",
+      "Q25": "Sometimes — maybe 1 in 5",
+      "Q26": "Follow a written exception rule",
+      "Q27": "A mix of tables and emails or notes",
+      "Q28": "Sometimes",
+      "Q29": "Same template / same layout",
+      "Q31": "I copy and paste",
+      "Q32": "Stable",
+      "Q33": [
+        "Takes too long",
+        "Easy to make mistakes",
+        "Boring / repetitive"
+      ],
+      "Q34": "Checking and validating",
+      "Q35": "2",
+      "Q36": "Someone else can cover easily",
+      "Q37": "Money lost or spent wrongly",
+      "Q38": [
+        "Money, invoices, or payments"
+      ],
+      "Q39": "Yes, we must keep a trail",
+      "Q40": "Yes — missing it has consequences",
+      "Q41": "Fewer mistakes",
+      "Q42": [
+        "Checking / validating",
+        "Moving data between systems or files"
+      ],
+      "Q43": [
+        "Approvals / sign-off",
+        "Handling the unusual cases"
+      ],
+      "Q44": [
+        "Fewer errors",
+        "Hours saved each week"
+      ],
+      "Q45": "Both",
+      "Q46": [
+        "My manager",
+        "Finance / compliance"
+      ],
+      "Q47": "We are struggling now",
+      "Q48": "Month-end is brutal — we often work late the last 3 days. PO numbers are sometimes missing from invoices which slows everything down."
+    },
+    "score": {
+      "impactScore": 95,
+      "feasibilityScore": 100,
+      "riskScore": 40,
+      "confidence": "high",
+      "bucket": "do-first",
+      "bucketLabel": "Do first",
+      "hoursPerYear": 4583,
+      "hoursPerWeek": 88.1,
+      "recommendedScope": "Data movement between systems is the natural first slice.",
+      "flags": [
+        "5 tools involved — integration complexity",
+        "Key-person risk: only 2 know how",
+        "Compliance controls needed",
+        "Weekly time guess does not match calculated volume"
+      ],
+      "feedback": [
+        "This looks like a strong candidate: meaningful impact and a repeatable path. Next step is a short walkthrough, then a build estimate.",
+        "Key-person risk is elevated. Even if this is not the biggest time-saver, making it teachable or automatable reduces operational risk."
+      ],
+      "reasons": {
+        "impact": [
+          "Very high volume (~4583 hrs/year)",
+          "Validation work — errors have direct financial impact",
+          "Cross-system checks — mismatches cause rework",
+          "Busy periods add pressure",
+          "High cost when done wrong",
+          "Hard deadline with consequences",
+          "Urgent — team struggling now"
+        ],
+        "feasibility": [
+          "Highly repeatable steps",
+          "Written exception rules exist",
+          "Copy-paste between tools — classic automation target",
+          "Can demo and share examples",
+          "Existing macros/templates — rules to harvest",
+          "Compare two sources — classic automation pattern"
+        ],
+        "risk": [
+          "Only two people know the full process",
+          "Sensitive data: Money, invoices, or payments"
+        ],
+        "confidence": [
+          "Submitter does the work regularly",
+          "Process steps provided",
+          "Time estimates inconsistent — sense-check needed"
+        ]
+      }
+    }
+  },
+  {
+    "id": "demo-finance-bank-rec",
+    "createdAt": "2026-08-22T14:30:00.000Z",
+    "answers": {
+      "Q1": "James Okonkwo",
+      "Q2": "james.okonkwo@meridianparts.co.uk",
+      "Q3": "Yes, I do it regularly",
+      "Q5": "Finance / accounts",
+      "Q6": "Weekly bank reconciliation",
+      "Q7": "Every Friday I download bank transactions, match them to Xero, and investigate anything that does not reconcile.",
+      "Q8": "Checking or validating numbers / figures",
+      "Q9": "Two systems or spreadsheets that should agree (e.g. invoice vs PO)",
+      "Q10": "Fully done by people",
+      "Q11": "Weekly",
+      "Q12": "1",
+      "Q13": "2–4 hours",
+      "Q14": "Almost all doing",
+      "Q15": "1",
+      "Q16": "Steady year-round",
+      "Q17": [
+        "More mistakes"
+      ],
+      "Q19": "A date / calendar (e.g. every Friday)",
+      "Q20": [
+        "Download CSV from bank portal",
+        "Import into Excel reconciliation template",
+        "Match each line to Xero transactions",
+        "Flag unmatched items and investigate",
+        "Save reconciled file and email summary to FD"
+      ],
+      "Q21": [
+        "Excel / Google Sheets",
+        "Accounting / finance system",
+        "A supplier, bank, or government website",
+        "Email"
+      ],
+      "Q22": "A spreadsheet or report",
+      "Q24": "Yes, same steps almost always",
+      "Q25": "Rarely — most items are straightforward",
+      "Q26": "Follow a written exception rule",
+      "Q27": "Tables, forms, and fields (numbers, dates, dropdowns)",
+      "Q28": "Almost never",
+      "Q31": "I download a file and upload it somewhere else",
+      "Q32": "Stable",
+      "Q33": [
+        "Only one or two people know how",
+        "Takes too long"
+      ],
+      "Q34": "Checking and validating",
+      "Q35": "Only 1",
+      "Q36": "It waits until they are back",
+      "Q37": "Extra rework for the team",
+      "Q38": [
+        "Money, invoices, or payments"
+      ],
+      "Q40": "There is an expected turnaround, a bit flexible",
+      "Q41": "Reduce risk (key person or compliance)",
+      "Q42": [
+        "Checking / validating",
+        "Moving data between systems or files"
+      ],
+      "Q43": [
+        "Handling the unusual cases"
+      ],
+      "Q44": [
+        "It no longer depends on one person",
+        "Less overtime / less stress"
+      ],
+      "Q45": "I can walk someone through it",
+      "Q46": [
+        "My manager"
+      ],
+      "Q47": "This quarter would be valuable",
+      "Q48": "Only I know all the exception codes and where to look for missing transactions."
+    },
+    "score": {
+      "impactScore": 53,
+      "feasibilityScore": 100,
+      "riskScore": 73,
+      "confidence": "high",
+      "bucket": "easy-win",
+      "bucketLabel": "Easy win",
+      "hoursPerYear": 156,
+      "hoursPerWeek": 3,
+      "recommendedScope": "Validation and exception flagging — keep approvals with a person.",
+      "flags": [
+        "Key-person risk: only 1 knows how",
+        "Compliance controls needed"
+      ],
+      "feedback": [
+        "This looks straightforward. It may not be the highest-value item, but it could be a quick win if you have spare capacity.",
+        "Key-person risk is elevated. Even if this is not the biggest time-saver, making it teachable or automatable reduces operational risk."
+      ],
+      "reasons": {
+        "impact": [
+          "Some volume (~156 hrs/year)",
+          "Validation work — errors have direct financial impact",
+          "Cross-system checks — mismatches cause rework"
+        ],
+        "feasibility": [
+          "Highly repeatable steps",
+          "Written exception rules exist",
+          "Structured data (tables and fields)",
+          "File transfer between systems",
+          "Discovery-ready",
+          "Compare two sources — classic automation pattern"
+        ],
+        "risk": [
+          "Only one person knows the full process",
+          "Work stops when key person is away",
+          "Sensitive data: Money, invoices, or payments"
+        ],
+        "confidence": [
+          "Submitter does the work regularly",
+          "Process steps provided"
+        ]
+      }
+    }
+  },
+  {
+    "id": "demo-sales-quote-followup",
+    "createdAt": "2026-08-25T11:00:00.000Z",
+    "answers": {
+      "Q1": "Emma Walsh",
+      "Q2": "emma.walsh@meridianparts.co.uk",
+      "Q3": "I manage people who do it",
+      "Q4": "Tom Hughes, tom.hughes@meridianparts.co.uk",
+      "Q5": "Sales",
+      "Q6": "Quote follow-up and CRM updates",
+      "Q7": "After sending a quote, someone has to chase the customer, update HubSpot, and log outcomes in a shared spreadsheet.",
+      "Q8": "A mix of several of these",
+      "Q9": "Not much checking — mostly data entry or moving data",
+      "Q10": "Some software already, still lots of manual work",
+      "Q11": "A few times a week",
+      "Q12": "8-12",
+      "Q13": "15–30 min",
+      "Q14": "Mix of doing and waiting",
+      "Q15": "4–7",
+      "Q16": "Steady year-round",
+      "Q17": [
+        "It just waits — no big deal"
+      ],
+      "Q19": "Someone asks in chat or in person",
+      "Q20": [
+        "Check HubSpot for quotes sent over 5 days ago with no response",
+        "Send follow-up email from template",
+        "Update deal stage in HubSpot",
+        "Log activity in team tracking spreadsheet"
+      ],
+      "Q21": [
+        "CRM",
+        "Email",
+        "Excel / Google Sheets",
+        "Teams / Slack"
+      ],
+      "Q22": "A record updated in a system",
+      "Q24": "Same overall, but exceptions come up",
+      "Q25": "Sometimes — maybe 1 in 5",
+      "Q26": "Use their experience / judgment",
+      "Q27": "A mix of tables and emails or notes",
+      "Q28": "Almost never",
+      "Q31": "Mix of the above",
+      "Q32": "Small tweaks",
+      "Q33": [
+        "Chasing other people",
+        "Boring / repetitive"
+      ],
+      "Q34": "Waiting / chasing",
+      "Q35": "Many people",
+      "Q36": "Someone else can cover easily",
+      "Q37": "Small inconvenience — we fix it later",
+      "Q38": [
+        "None of these"
+      ],
+      "Q40": "No real deadline",
+      "Q41": "Save time",
+      "Q42": [
+        "Reminders and chasing",
+        "Moving data between systems or files"
+      ],
+      "Q43": [
+        "Talking to customers",
+        "Handling the unusual cases"
+      ],
+      "Q44": [
+        "Hours saved each week"
+      ],
+      "Q45": "I can walk someone through it",
+      "Q46": [
+        "My manager",
+        "IT"
+      ],
+      "Q47": "This year is fine"
+    },
+    "score": {
+      "impactScore": 22,
+      "feasibilityScore": 70,
+      "riskScore": 4,
+      "confidence": "high",
+      "bucket": "easy-win",
+      "bucketLabel": "Easy win",
+      "hoursPerYear": 787,
+      "hoursPerWeek": 15.1,
+      "recommendedScope": "Focus on reminders, handoffs, and workflow — not just data entry.",
+      "flags": [],
+      "feedback": [
+        "This looks straightforward. It may not be the highest-value item, but it could be a quick win if you have spare capacity."
+      ],
+      "reasons": {
+        "impact": [
+          "Moderate volume (~787 hrs/year)",
+          "Backlog has limited consequence"
+        ],
+        "feasibility": [
+          "Mostly repeatable with exceptions",
+          "Discovery-ready"
+        ],
+        "risk": [],
+        "confidence": [
+          "Process steps provided"
+        ]
+      }
+    }
+  }
+]
