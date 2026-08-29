@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getQuestionsForStep, STEPS } from "@/lib/questions";
 import type { FormAnswers, Submission } from "@/lib/types";
@@ -14,6 +14,14 @@ import {
   ConfidenceBadge,
   ScoreBar,
 } from "@/components/ScoreDisplay";
+import {
+  REVIEW_STORAGE_KEY,
+  firstIncompleteStep,
+  mergeWithEmpty,
+  reviewSummary,
+  type FieldStatus,
+  type ReviewPayload,
+} from "@/lib/intake-session";
 
 export function IntakeForm() {
   const router = useRouter();
@@ -22,14 +30,55 @@ export function IntakeForm() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<Submission | null>(null);
+  const [review, setReview] = useState<ReviewPayload | null>(null);
+
+  // Hydrate from the explain session after SSR. sessionStorage is not available on the server.
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(REVIEW_STORAGE_KEY);
+      if (!raw) return;
+      const payload = JSON.parse(raw) as ReviewPayload;
+      sessionStorage.removeItem(REVIEW_STORAGE_KEY);
+      const nextAnswers = mergeWithEmpty(payload.answers ?? {});
+      /* eslint-disable react-hooks/set-state-in-effect -- client-only session restore */
+      setAnswers(nextAnswers);
+      setReview(payload);
+      setStep(firstIncompleteStep(nextAnswers, payload.statuses ?? {}));
+      /* eslint-enable react-hooks/set-state-in-effect */
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch {
+      sessionStorage.removeItem(REVIEW_STORAGE_KEY);
+    }
+  }, []);
 
   const currentStep = STEPS.find((s) => s.id === step)!;
   const questions = getQuestionsForStep(step, answers);
   const progress = (step / STEPS.length) * 100;
+  const reviewMeta = review
+    ? reviewSummary(answers, review.statuses ?? {}, review.notes ?? {})
+    : null;
+
+  function fieldHighlight(id: string) {
+    if (!review) return undefined;
+    const status = review.statuses?.[id] as FieldStatus | undefined;
+    if (status === "unclear") return "unclear" as const;
+    if (reviewMeta?.missing.some((q) => q.id === id)) return "missing" as const;
+    return undefined;
+  }
 
   function handleChange(id: string, value: string | string[]) {
     setAnswers((prev) => ({ ...prev, [id]: value }));
     setError(null);
+    setReview((prev) => {
+      if (!prev) return prev;
+      const nextNotes = { ...prev.notes };
+      delete nextNotes[id];
+      return {
+        ...prev,
+        statuses: { ...prev.statuses, [id]: "sufficient" },
+        notes: nextNotes,
+      };
+    });
   }
 
   function handleNext() {
@@ -177,9 +226,10 @@ export function IntakeForm() {
             <button
               type="button"
               onClick={() => {
-                setResult(null);
-                setStep(1);
-                setAnswers(emptyAnswers());
+              setResult(null);
+              setReview(null);
+              setStep(1);
+              setAnswers(emptyAnswers());
               }}
               className="rounded-lg px-5 py-2.5 text-sm font-medium text-slate-500 transition-colors hover:text-slate-700"
             >
@@ -193,6 +243,72 @@ export function IntakeForm() {
 
   return (
     <div className="mx-auto max-w-2xl">
+      {reviewMeta && (
+        <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-base font-semibold text-slate-900">
+            Review what we captured
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            {reviewMeta.filledCount} of {reviewMeta.visibleCount} visible fields have
+            enough to review. Edit anything below, then submit as usual.
+          </p>
+          {reviewMeta.missing.length > 0 && (
+            <div className="mt-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-rose-600">
+                Still needed
+              </p>
+              <ul className="mt-2 space-y-1 text-sm text-slate-700">
+                {reviewMeta.missing.slice(0, 8).map((q) => (
+                  <li key={q.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStep(q.step);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                      className="text-left hover:underline"
+                    >
+                      {q.title}
+                    </button>
+                  </li>
+                ))}
+                {reviewMeta.missing.length > 8 && (
+                  <li className="text-slate-400">
+                    +{reviewMeta.missing.length - 8} more
+                  </li>
+                )}
+              </ul>
+            </div>
+          )}
+          {reviewMeta.unclear.length > 0 && (
+            <div className="mt-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">
+                Please clarify
+              </p>
+              <ul className="mt-2 space-y-2 text-sm text-slate-700">
+                {reviewMeta.unclear.map((q) => (
+                  <li key={q.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStep(q.step);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                      className="text-left font-medium hover:underline"
+                    >
+                      {q.title}
+                    </button>
+                    {review?.notes?.[q.id] && (
+                      <p className="text-slate-500">{review.notes[q.id]}</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="mb-8">
         <div className="mb-4 flex items-center justify-between text-sm">
           <span className="font-medium text-slate-900">
@@ -217,6 +333,7 @@ export function IntakeForm() {
               question={q}
               value={answers[q.id]}
               onChange={handleChange}
+              highlight={fieldHighlight(q.id)}
             />
           ))}
         </div>

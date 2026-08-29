@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Header } from "@/components/Header";
 import { IntakeForm } from "@/components/IntakeForm";
 
@@ -15,6 +16,17 @@ export default function HomePage() {
               A structured intake for business teams. Answer in plain language —
               we score impact and feasibility automatically and add it to your backlog.
             </p>
+            <div className="mt-6">
+              <Link
+                href="/explain"
+                className="inline-flex items-center rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800"
+              >
+                Explain it rather than type it
+              </Link>
+              <p className="mt-2 text-xs text-slate-400">
+                Talk, type, or share your screen — then review the same form before submitting.
+              </p>
+            </div>
           </div>
           <IntakeForm />
         </div>

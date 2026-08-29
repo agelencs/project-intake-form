@@ -2,10 +2,13 @@
 
 import type { FormAnswers, QuestionDef } from "@/lib/types";
 
+export type FieldHighlight = "missing" | "unclear";
+
 type Props = {
   question: QuestionDef;
   value: string | string[] | undefined;
   onChange: (id: string, value: string | string[]) => void;
+  highlight?: FieldHighlight;
 };
 
 function toggleMulti(
@@ -26,11 +29,24 @@ function toggleMulti(
   return [...withoutNone, option];
 }
 
-export function QuestionField({ question, value, onChange }: Props) {
+export function QuestionField({
+  question,
+  value,
+  onChange,
+  highlight,
+}: Props) {
   const { id, title, helper, type, options, placeholder, maxSelect } = question;
 
   return (
-    <div className="space-y-3">
+    <div
+      className={`space-y-3 rounded-xl ${
+        highlight === "unclear"
+          ? "ring-2 ring-amber-300 ring-offset-4 ring-offset-white"
+          : highlight === "missing"
+            ? "ring-2 ring-rose-200 ring-offset-4 ring-offset-white"
+            : ""
+      }`}
+    >
       <div>
         <label htmlFor={id} className="block text-sm font-medium text-slate-900">
           {title}
@@ -200,16 +216,4 @@ export function validateStep(
   return null;
 }
 
-export function emptyAnswers(): FormAnswers {
-  return {
-    Q20: ["", "", "", "", ""],
-    Q21: [],
-    Q17: [],
-    Q33: [],
-    Q38: [],
-    Q42: [],
-    Q43: [],
-    Q44: [],
-    Q46: [],
-  };
-}
+export { emptyAnswers } from "@/lib/intake-session";

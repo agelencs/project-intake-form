@@ -17,6 +17,12 @@ export function Header() {
         </Link>
         <nav className="flex items-center gap-2">
           <Link
+            href="/explain"
+            className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+          >
+            Explain it
+          </Link>
+          <Link
             href="/"
             className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
           >
