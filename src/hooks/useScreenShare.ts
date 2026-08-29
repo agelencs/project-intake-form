@@ -2,21 +2,33 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+export const SCREEN_SHARE_DURATION_SEC = 20;
+export const SCREEN_SHARE_WARN_SEC = 5;
+
 export function useScreenShare() {
   const [sharing, setSharing] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+  const [timedOut, setTimedOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  const stop = useCallback(() => {
+  const endShare = useCallback((reason: "manual" | "timeout") => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
     setSharing(false);
+    setSecondsLeft(null);
+    setTimedOut(reason === "timeout");
   }, []);
+
+  const stop = useCallback(() => {
+    endShare("manual");
+  }, [endShare]);
 
   const start = useCallback(async () => {
     setError(null);
+    setTimedOut(false);
     if (typeof navigator === "undefined" || !navigator.mediaDevices?.getDisplayMedia) {
       setError("Screen sharing is not available in this browser.");
       return;
@@ -26,18 +38,34 @@ export function useScreenShare() {
         video: { frameRate: 5 },
         audio: false,
       });
-      stream.getVideoTracks()[0]?.addEventListener("ended", () => stop());
+      stream.getVideoTracks()[0]?.addEventListener("ended", () => endShare("manual"));
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play().catch(() => undefined);
       }
+      setSecondsLeft(SCREEN_SHARE_DURATION_SEC);
       setSharing(true);
     } catch (err) {
       if (err instanceof DOMException && err.name === "NotAllowedError") return;
       setError("Could not start screen sharing.");
     }
-  }, [stop]);
+  }, [endShare]);
+
+  useEffect(() => {
+    if (!sharing) return;
+    const id = setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev === null) return null;
+        if (prev <= 1) {
+          queueMicrotask(() => endShare("timeout"));
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [sharing, endShare]);
 
   const captureJpeg = useCallback(async (): Promise<string | null> => {
     const video = videoRef.current;
@@ -74,7 +102,16 @@ export function useScreenShare() {
     });
   }, [sharing]);
 
-  useEffect(() => () => stop(), [stop]);
+  useEffect(() => () => endShare("manual"), [endShare]);
 
-  return { sharing, error, videoRef, start, stop, captureJpeg };
+  return {
+    sharing,
+    secondsLeft,
+    timedOut,
+    error,
+    videoRef,
+    start,
+    stop,
+    captureJpeg,
+  };
 }

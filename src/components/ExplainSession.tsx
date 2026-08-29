@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useGeminiLive } from "@/hooks/useGeminiLive";
-import { useScreenShare } from "@/hooks/useScreenShare";
+import { useScreenShare, SCREEN_SHARE_DURATION_SEC, SCREEN_SHARE_WARN_SEC } from "@/hooks/useScreenShare";
 import type { LiveToolParse } from "@/lib/intake-live";
 import { liveSystemInstruction, OPENER } from "@/lib/intake-prompts";
 import {
@@ -38,6 +38,8 @@ export function ExplainSession() {
   const router = useRouter();
   const {
     sharing,
+    secondsLeft: shareSecondsLeft,
+    timedOut: shareTimedOut,
     error: screenError,
     videoRef,
     start: startShare,
@@ -204,6 +206,11 @@ export function ExplainSession() {
   }
 
   const currentQuestion = questions[questions.length - 1] ?? OPENER;
+  const shareCountdownWarning =
+    sharing &&
+    shareSecondsLeft !== null &&
+    shareSecondsLeft <= SCREEN_SHARE_WARN_SEC;
+
   const micBusy = liveStatus === "connecting";
 
   let micLabel = "Start conversation";
@@ -236,12 +243,29 @@ export function ExplainSession() {
             onClick={() => (sharing ? stopShare() : startShare())}
             className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
               sharing
-                ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+                ? shareCountdownWarning
+                  ? "border-amber-300 bg-amber-50 text-amber-900"
+                  : "border-emerald-300 bg-emerald-50 text-emerald-800"
                 : "border-slate-200 text-slate-700 hover:bg-slate-50"
             }`}
           >
-            {sharing ? "Stop sharing screen" : "Share screen"}
+            {sharing
+              ? shareSecondsLeft !== null
+                ? `Sharing (${shareSecondsLeft}s)`
+                : "Stop sharing screen"
+              : "Share screen"}
           </button>
+          {sharing && shareSecondsLeft !== null && (
+            <span
+              className={`text-xs font-medium ${
+                shareCountdownWarning ? "text-amber-700" : "text-slate-500"
+              }`}
+            >
+              {shareCountdownWarning
+                ? `Stopping in ${shareSecondsLeft}s — show what you need now`
+                : `${shareSecondsLeft}s left (max ${SCREEN_SHARE_DURATION_SEC}s per share)`}
+            </span>
+          )}
           <span className="ml-auto text-xs text-slate-400">
             {liveStatus === "live"
               ? "Speak naturally — the agent will ask the next question"
@@ -277,6 +301,13 @@ export function ExplainSession() {
         {(error || screenError) && (
           <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
             {error || screenError}
+          </div>
+        )}
+
+        {shareTimedOut && !sharing && (
+          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            Screen sharing stopped after {SCREEN_SHARE_DURATION_SEC} seconds to limit
+            what is sent to the AI. Tap Share screen again if you need another look.
           </div>
         )}
 
@@ -323,9 +354,20 @@ export function ExplainSession() {
           </p>
         </div>
         {sharing && (
-          <p className="border-b border-slate-100 bg-slate-50 px-5 pt-3 text-xs font-medium text-slate-500">
+          <div
+            className={`border-b px-5 pt-3 text-xs font-medium ${
+              shareCountdownWarning
+                ? "border-amber-100 bg-amber-50 text-amber-800"
+                : "border-slate-100 bg-slate-50 text-slate-500"
+            }`}
+          >
             Shared screen
-          </p>
+            {shareSecondsLeft !== null && (
+              <span className="ml-2">
+                · stops in {shareSecondsLeft}s
+              </span>
+            )}
+          </div>
         )}
         <video
           ref={videoRef}
@@ -341,7 +383,8 @@ export function ExplainSession() {
         />
         {sharing && (
           <p className="border-b border-slate-100 bg-slate-50 px-5 pb-3 text-[11px] leading-relaxed text-slate-400">
-            Screenshots are sent to Gemini to help fill the form. They are not stored.
+            Up to {SCREEN_SHARE_DURATION_SEC} seconds per share. Frames are sent to Gemini
+            to help fill the form and are not stored.
           </p>
         )}
         <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4 text-sm">
