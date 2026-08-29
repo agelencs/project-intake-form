@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useGeminiLive } from "@/hooks/useGeminiLive";
 import { useScreenShare, SCREEN_SHARE_DURATION_SEC, SCREEN_SHARE_WARN_SEC } from "@/hooks/useScreenShare";
 import type { LiveToolParse } from "@/lib/intake-live";
-import { liveSystemInstruction, OPENER } from "@/lib/intake-prompts";
+import { liveSystemInstruction } from "@/lib/intake-prompts";
 import {
   REVIEW_STORAGE_KEY,
   applyUpdates,
@@ -57,7 +57,7 @@ export function ExplainSession() {
     sendJpegFrame,
   } = useGeminiLive();
 
-  const [questions, setQuestions] = useState<string[]>([OPENER]);
+  const [questions, setQuestions] = useState<string[]>([]);
   const [lines, setLines] = useState<TranscriptLine[]>([]);
   const [typed, setTyped] = useState("");
   const [finishing, setFinishing] = useState(false);
@@ -199,7 +199,7 @@ export function ExplainSession() {
     router.push("/?review=1");
   }
 
-  const currentQuestion = questions[questions.length - 1] ?? OPENER;
+  const currentQuestion = questions[questions.length - 1] ?? "";
   const headlineQuestion = streamingQuestion || currentQuestion;
   const shareCountdownWarning =
     sharing &&
@@ -273,7 +273,11 @@ export function ExplainSession() {
             On the table
           </p>
           <h2 className="mt-2 text-2xl font-semibold leading-snug text-slate-900">
-            {headlineQuestion}
+            {headlineQuestion || (
+              <span className="text-slate-400">
+                Start the conversation — the agent will ask the first question.
+              </span>
+            )}
           </h2>
           <p className="mt-2 text-sm text-slate-500">
             Answer whenever you get to it — you can keep explaining in the meantime.

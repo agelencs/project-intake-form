@@ -1,8 +1,5 @@
 import { buildQuestionCatalog } from "@/lib/intake-session";
 
-export const OPENER =
-  "Can you please introduce yourself — your name, where you work, your role, and what you do day to day?";
-
 export const CONVERSATION_GUIDE = `Start simple. First learn who they are, then the work.
 
 Order of the conversation (do not skip identity unless they already volunteered it):
