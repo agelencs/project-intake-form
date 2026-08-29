@@ -2,6 +2,10 @@ import { google } from "@ai-sdk/google";
 
 export const INTAKE_MODEL_ID = "gemini-3.7-flash";
 
+export function hasGoogleGeminiKey(): boolean {
+  return Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY);
+}
+
 export function hasIntakeModelKey(): boolean {
   return Boolean(
     process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.AI_GATEWAY_API_KEY,

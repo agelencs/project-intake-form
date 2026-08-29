@@ -2,9 +2,9 @@ import { generateText, Output } from "ai";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getIntakeModel, hasIntakeModelKey } from "@/lib/intake-model";
+import { pauseSystemPrompt } from "@/lib/intake-prompts";
 import {
   applyUpdates,
-  buildQuestionCatalog,
   emptyAnswers,
   emptyStatuses,
   formatStateForPrompt,
@@ -50,33 +50,7 @@ const requestSchema = z.object({
 });
 
 function systemPrompt(): string {
-  return `You are filling an EXISTING automation intake form from a live conversation and optional screenshots.
-
-The form below is the only source of truth. Never invent fields, scores, or a new requirements structure.
-For single/multi questions you MUST copy an option string exactly — including punctuation and en-dashes.
-A single user explanation may fill many fields. Do not re-ask anything already marked sufficient.
-If you are not confident which option fits, set status to "unclear", leave a short note, and ask about it.
-Do not fill name or email unless the user actually said them. Never invent contact details.
-
-Statuses:
-- unanswered: nothing useful yet
-- partial: some signal, not enough to score
-- sufficient: can be used as a form answer
-- unclear: something was said/shown but it does not map cleanly
-
-You are called after a pause in speech, with only the NEW words since the last pause, plus the current form state (that is your memory of everything already understood). Do not expect a full transcript.
-
-After extracting updates: if something important is missing or unclear, set followUpQuestion to ONE natural clarifying question. It will stay on the user's screen. They may keep talking and answer it later — do not wait for them to stop for good. Do not walk the form question-by-question. Do not list field IDs. Prefer work description, process steps, tools, volume, then pain, then identity.
-keepListening=true means they can keep talking; you may still return a followUpQuestion if a clarification would help.
-Do not repeat a question already listed in previousQuestions unless they ignored it and it is still the most important gap.
-If the new words clearly continue a rich explanation and nothing is blocking, followUpQuestion may be null.
-
-If a screenshot is attached, look at it. Combine it with speech (e.g. "this is where we currently do it"). Infer tools, data shape, steps, and outputs from what is visible. Mention what you saw in screenObservation.
-
-When finalize=true: extract last details, do not ask a new question, set followUpQuestion to null, and put remaining doubts in notes / understood.
-
-FORM CATALOG:
-${buildQuestionCatalog()}`;
+  return pauseSystemPrompt();
 }
 
 function parseJsonObject(text: string): unknown {

@@ -2,21 +2,30 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useGeminiLive } from "@/hooks/useGeminiLive";
 import { useScreenShare } from "@/hooks/useScreenShare";
 import { useSpeechTranscript } from "@/hooks/useSpeechTranscript";
+import type { LiveToolParse } from "@/lib/intake-live";
+import {
+  liveSystemInstruction,
+  OPENER,
+} from "@/lib/intake-prompts";
 import {
   REVIEW_STORAGE_KEY,
+  applyUpdates,
   emptyAnswers,
   emptyStatuses,
+  formatStateForPrompt,
+  reviewSummary,
   type FieldStatus,
 } from "@/lib/intake-session";
 import type { FormAnswers } from "@/lib/types";
 
-const OPENER =
-  "Tell me about the work you would like to automate. Walk me through it as if I were a new colleague — what it is, how it happens today, and what is painful. You can share your screen if pointing at it is easier than describing it.";
+type IntakeMode = "pause" | "live";
 
 type TranscriptLine =
   | { id: string; kind: "user"; text: string }
+  | { id: string; kind: "ai"; text: string }
   | { id: string; kind: "note"; text: string }
   | { id: string; kind: "screen"; text: string };
 
@@ -35,6 +44,13 @@ type AnalyzeResponse = {
 
 function newId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function pushQuestion(prev: string[], next: string) {
+  const trimmed = next.trim();
+  if (!trimmed) return prev;
+  if (prev[prev.length - 1] === trimmed) return prev;
+  return [...prev, trimmed];
 }
 
 export function ExplainSession() {
@@ -56,7 +72,18 @@ export function ExplainSession() {
     setOnFinal,
     appendTyped,
   } = useSpeechTranscript();
+  const {
+    status: liveStatus,
+    listening: liveMicOn,
+    connect: connectLive,
+    disconnect: disconnectLive,
+    startListening: startLiveMic,
+    stopListening: stopLiveMic,
+    sendText: sendLiveText,
+    sendJpegFrame,
+  } = useGeminiLive();
 
+  const [mode, setMode] = useState<IntakeMode>("pause");
   const [questions, setQuestions] = useState<string[]>([OPENER]);
   const [lines, setLines] = useState<TranscriptLine[]>([]);
   const [typed, setTyped] = useState("");
@@ -64,6 +91,8 @@ export function ExplainSession() {
   const [finishing, setFinishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [coverage, setCoverage] = useState({ filled: 0, visible: 48 });
+  const [liveInterimUser, setLiveInterimUser] = useState("");
+  const [liveInterimAi, setLiveInterimAi] = useState("");
 
   const answersRef = useRef<FormAnswers>(emptyAnswers());
   const statusesRef = useRef<Record<string, FieldStatus>>(emptyStatuses());
@@ -77,6 +106,8 @@ export function ExplainSession() {
   const transcriptEndRef = useRef<HTMLDivElement | null>(null);
   const sharingRef = useRef(sharing);
   const captureJpegRef = useRef(captureJpeg);
+  const lastLiveUserRef = useRef("");
+  const lastLiveAiRef = useRef("");
   const runAnalyzeRef = useRef<
     (opts: {
       recent: string;
@@ -100,7 +131,7 @@ export function ExplainSession() {
 
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [lines, interim]);
+  }, [lines, interim, liveInterimUser, liveInterimAi]);
 
   useEffect(() => {
     runAnalyzeRef.current = async (opts) => {
@@ -161,11 +192,7 @@ export function ExplainSession() {
           ]);
         }
         if (data.followUpQuestion) {
-          setQuestions((prev) =>
-            prev[prev.length - 1] === data.followUpQuestion
-              ? prev
-              : [...prev, data.followUpQuestion as string],
-          );
+          setQuestions((prev) => pushQuestion(prev, data.followUpQuestion as string));
         }
         return data;
       } catch {
@@ -204,7 +231,7 @@ export function ExplainSession() {
   }, [scheduleAnalyze, setOnFinal]);
 
   useEffect(() => {
-    if (!sharing) return;
+    if (!sharing || mode !== "pause") return;
     const timer = setTimeout(() => {
       if (!transcriptRef.current.trim()) {
         void runAnalyzeRef.current({
@@ -214,19 +241,139 @@ export function ExplainSession() {
       }
     }, 4500);
     return () => clearTimeout(timer);
-  }, [sharing]);
+  }, [sharing, mode]);
+
+  const applyLiveTool = useCallback((parsed: LiveToolParse) => {
+    const merged = applyUpdates(
+      answersRef.current,
+      statusesRef.current,
+      notesRef.current,
+      parsed.updates,
+    );
+    answersRef.current = merged.answers;
+    statusesRef.current = merged.statuses;
+    notesRef.current = merged.notes;
+    const summary = reviewSummary(merged.answers, merged.statuses, merged.notes);
+    setCoverage({ filled: summary.filledCount, visible: summary.visibleCount });
+
+    if (parsed.understood.length) {
+      setLines((prev) => [
+        ...prev,
+        ...parsed.understood.map((text) => ({
+          id: newId(),
+          kind: "note" as const,
+          text,
+        })),
+      ]);
+    }
+    if (parsed.screenObservation) {
+      setLines((prev) => [
+        ...prev,
+        { id: newId(), kind: "screen", text: parsed.screenObservation as string },
+      ]);
+    }
+    if (parsed.followUpQuestion) {
+      setQuestions((prev) => pushQuestion(prev, parsed.followUpQuestion as string));
+    }
+
+    return {
+      filledCount: summary.filledCount,
+      visibleCount: summary.visibleCount,
+      remainingRequired: summary.missing.map((q) => `${q.id}: ${q.title}`),
+      remainingUnclear: summary.unclear.map((q) => `${q.id}: ${q.title}`),
+    };
+  }, []);
+
+  useEffect(() => {
+    if (mode !== "live" || liveStatus !== "live" || !sharing) return;
+    const timer = setInterval(async () => {
+      const jpeg = await captureJpegRef.current();
+      if (jpeg) sendJpegFrame(jpeg);
+    }, 2000);
+    return () => clearInterval(timer);
+  }, [mode, liveStatus, sendJpegFrame, sharing]);
+
+  function switchMode(next: IntakeMode) {
+    if (next === mode) return;
+    if (mode === "pause") {
+      stopMic();
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    } else {
+      disconnectLive();
+      setLiveInterimUser("");
+      setLiveInterimAi("");
+    }
+    setError(null);
+    setMode(next);
+    setQuestions([OPENER]);
+  }
+
+  async function handleLiveMic() {
+    if (liveStatus === "connecting") return;
+    if (liveStatus === "live" && liveMicOn) {
+      stopLiveMic();
+      return;
+    }
+    if (liveStatus === "live") {
+      await startLiveMic();
+      return;
+    }
+
+    setError(null);
+    const ok = await connectLive({
+      systemInstruction: liveSystemInstruction(
+        formatStateForPrompt(answersRef.current, statusesRef.current, notesRef.current),
+      ),
+      onUserTranscript: (text, final) => {
+        if (!final) {
+          setLiveInterimUser(text);
+          return;
+        }
+        setLiveInterimUser("");
+        if (!text || text === lastLiveUserRef.current) return;
+        lastLiveUserRef.current = text;
+        setLines((prev) => [...prev, { id: newId(), kind: "user", text }]);
+      },
+      onAssistantTranscript: (text, final) => {
+        if (!final) {
+          setLiveInterimAi(text);
+          return;
+        }
+        setLiveInterimAi("");
+        if (!text || text === lastLiveAiRef.current) return;
+        lastLiveAiRef.current = text;
+        setLines((prev) => [...prev, { id: newId(), kind: "ai", text }]);
+        if (text.includes("?")) {
+          setQuestions((prev) => pushQuestion(prev, text));
+        }
+      },
+      onTool: applyLiveTool,
+      onError: (message) => setError(message),
+    });
+    if (ok) await startLiveMic();
+  }
 
   async function handleTypedSubmit(e: React.FormEvent) {
     e.preventDefault();
     const text = typed.trim();
     if (!text) return;
     setTyped("");
+    setLines((prev) => [...prev, { id: newId(), kind: "user", text }]);
+
+    if (mode === "live") {
+      if (liveStatus !== "live") {
+        setError("Start the live conversation first, then type if you want.");
+        return;
+      }
+      sendLiveText(text);
+      return;
+    }
+
     const next = transcriptRef.current
       ? `${transcriptRef.current}\n${text}`
       : text;
     transcriptRef.current = next;
     appendTyped(text);
-    setLines((prev) => [...prev, { id: newId(), kind: "user", text }]);
     if (analyzingRef.current) {
       pendingRef.current = true;
       return;
@@ -236,14 +383,16 @@ export function ExplainSession() {
 
   async function handleFinish() {
     setFinishing(true);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    const leftover = transcriptRef.current
-      .slice(analyzedThroughRef.current.length)
-      .trim();
-    if (leftover || Object.keys(notesRef.current).length >= 0) {
+    if (mode === "pause") {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      const leftover = transcriptRef.current
+        .slice(analyzedThroughRef.current.length)
+        .trim();
       await runAnalyzeRef.current({ recent: leftover, finalize: true });
+      stopMic();
+    } else {
+      disconnectLive();
     }
-    stopMic();
     stopShare();
     const payload = {
       answers: answersRef.current,
@@ -256,21 +405,86 @@ export function ExplainSession() {
   }
 
   const currentQuestion = questions[questions.length - 1] ?? OPENER;
+  const pauseListening = mode === "pause" && listening;
+  const liveListening = mode === "live" && liveMicOn;
+  const micBusy = mode === "live" && liveStatus === "connecting";
+  const shownInterim =
+    mode === "live" ? liveInterimUser : interim;
+
+  let micLabel = "Start microphone";
+  if (mode === "pause") {
+    micLabel = pauseListening ? "Listening… tap to pause" : "Start microphone";
+  } else if (liveStatus === "connecting") {
+    micLabel = "Connecting to Live…";
+  } else if (liveListening) {
+    micLabel = "Live — tap to pause mic";
+  } else if (liveStatus === "live") {
+    micLabel = "Resume microphone";
+  } else {
+    micLabel = "Start live conversation";
+  }
 
   return (
     <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(20rem,0.9fr)]">
       <section className="flex min-h-[70vh] flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <div className="mb-5 flex flex-wrap items-center gap-3">
+          <div
+            className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1"
+            role="radiogroup"
+            aria-label="Intake conversation mode"
+          >
+            <button
+              type="button"
+              role="radio"
+              aria-checked={mode === "pause"}
+              onClick={() => switchMode("pause")}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                mode === "pause"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              Pause & extract
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={mode === "live"}
+              onClick={() => switchMode("live")}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                mode === "live"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              Gemini Live
+            </button>
+          </div>
+          <p className="text-xs text-slate-400">
+            {mode === "pause"
+              ? "After you pause, Gemini Flash fills the form. Same questions, no spoken reply."
+              : "Realtime voice. Gemini speaks back and fills the same form. Use headphones."}
+          </p>
+        </div>
+
         <div className="mb-6 flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={() => (listening ? stopMic() : startMic())}
-            className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-              listening
+            disabled={micBusy}
+            onClick={() =>
+              mode === "live"
+                ? void handleLiveMic()
+                : pauseListening
+                  ? stopMic()
+                  : startMic()
+            }
+            className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors disabled:opacity-60 ${
+              pauseListening || liveListening
                 ? "bg-rose-600 text-white hover:bg-rose-500"
                 : "bg-slate-900 text-white hover:bg-slate-800"
             }`}
           >
-            {listening ? "Listening… tap to pause" : "Start microphone"}
+            {micLabel}
           </button>
           <button
             type="button"
@@ -284,7 +498,13 @@ export function ExplainSession() {
             {sharing ? "Stop sharing screen" : "Share screen"}
           </button>
           <span className="ml-auto text-xs text-slate-400">
-            {analyzing ? "Updating from the last pause…" : "Keep talking — questions stay on screen"}
+            {mode === "live"
+              ? liveStatus === "live"
+                ? "Speak naturally — the agent will ask the next question"
+                : "Start live to talk with the agent"
+              : analyzing
+                ? "Updating from the last pause…"
+                : "Keep talking — questions stay on screen"}
           </span>
         </div>
 
@@ -295,6 +515,9 @@ export function ExplainSession() {
           <h2 className="mt-2 text-2xl font-semibold leading-snug text-slate-900">
             {currentQuestion}
           </h2>
+          {liveInterimAi && (
+            <p className="mt-2 text-sm italic text-slate-400">{liveInterimAi}</p>
+          )}
           <p className="mt-2 text-sm text-slate-500">
             Answer whenever you get to it — you can keep explaining in the meantime.
           </p>
@@ -355,7 +578,9 @@ export function ExplainSession() {
         <div className="border-b border-slate-100 px-5 py-4">
           <h3 className="text-sm font-semibold text-slate-900">Live transcript</h3>
           <p className="mt-1 text-xs text-slate-500">
-            What we heard, plus short notes of what the AI understood.
+            {mode === "live"
+              ? "What you both said, plus short notes of what was written onto the form."
+              : "What we heard, plus short notes of what the AI understood."}
           </p>
         </div>
         {sharing && (
@@ -381,7 +606,7 @@ export function ExplainSession() {
           </p>
         )}
         <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4 text-sm">
-          {lines.length === 0 && !interim && (
+          {lines.length === 0 && !shownInterim && !liveInterimAi && (
             <p className="text-slate-400">Waiting for you to start talking…</p>
           )}
           {lines.map((line) => (
@@ -390,9 +615,11 @@ export function ExplainSession() {
               className={
                 line.kind === "user"
                   ? "text-slate-800"
-                  : line.kind === "screen"
-                    ? "rounded-lg bg-indigo-50 px-3 py-2 text-indigo-800"
-                    : "rounded-lg bg-slate-50 px-3 py-2 text-slate-600"
+                  : line.kind === "ai"
+                    ? "rounded-lg bg-violet-50 px-3 py-2 text-violet-900"
+                    : line.kind === "screen"
+                      ? "rounded-lg bg-indigo-50 px-3 py-2 text-indigo-800"
+                      : "rounded-lg bg-slate-50 px-3 py-2 text-slate-600"
               }
             >
               {line.kind === "note" && (
@@ -405,17 +632,23 @@ export function ExplainSession() {
                   Screen
                 </span>
               )}
+              {line.kind === "ai" && (
+                <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-violet-500">
+                  Agent
+                </span>
+              )}
               {line.text}
             </p>
           ))}
-          {interim && (
-            <p className="italic text-slate-400">{interim}</p>
+          {shownInterim && (
+            <p className="italic text-slate-400">{shownInterim}</p>
           )}
           <div ref={transcriptEndRef} />
         </div>
         <div className="border-t border-slate-100 px-5 py-3 text-xs text-slate-400">
           {coverage.filled} fields have enough to review
-          {analyzing ? " · analysing…" : ""}
+          {mode === "pause" && analyzing ? " · analysing…" : ""}
+          {mode === "live" && liveStatus === "live" ? " · live" : ""}
         </div>
       </aside>
     </div>
