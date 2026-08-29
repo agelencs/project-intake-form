@@ -64,7 +64,7 @@ export function ExplainSession() {
   const [error, setError] = useState<string | null>(null);
   const [coverage, setCoverage] = useState({ filled: 0, visible: 48 });
   const [liveInterimUser, setLiveInterimUser] = useState("");
-  const [liveInterimAi, setLiveInterimAi] = useState("");
+  const [streamingQuestion, setStreamingQuestion] = useState("");
 
   const answersRef = useRef<FormAnswers>(emptyAnswers());
   const statusesRef = useRef<Record<string, FieldStatus>>(emptyStatuses());
@@ -80,7 +80,7 @@ export function ExplainSession() {
 
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [lines, liveInterimUser, liveInterimAi]);
+  }, [lines, liveInterimUser, streamingQuestion]);
 
   const applyLiveTool = useCallback((parsed: LiveToolParse) => {
     const merged = applyUpdates(
@@ -110,9 +110,6 @@ export function ExplainSession() {
         ...prev,
         { id: newId(), kind: "screen", text: parsed.screenObservation as string },
       ]);
-    }
-    if (parsed.followUpQuestion) {
-      setQuestions((prev) => pushQuestion(prev, parsed.followUpQuestion as string));
     }
 
     return {
@@ -159,17 +156,14 @@ export function ExplainSession() {
         setLines((prev) => [...prev, { id: newId(), kind: "user", text }]);
       },
       onAssistantTranscript: (text, final) => {
-        if (!final) {
-          setLiveInterimAi(text);
-          return;
-        }
-        setLiveInterimAi("");
-        if (!text || text === lastLiveAiRef.current) return;
+        if (!text) return;
+        setStreamingQuestion(text);
+        if (!final) return;
+        setStreamingQuestion("");
+        if (text === lastLiveAiRef.current) return;
         lastLiveAiRef.current = text;
         setLines((prev) => [...prev, { id: newId(), kind: "ai", text }]);
-        if (text.includes("?")) {
-          setQuestions((prev) => pushQuestion(prev, text));
-        }
+        setQuestions((prev) => pushQuestion(prev, text));
       },
       onTool: applyLiveTool,
       onError: (message) => setError(message),
@@ -206,6 +200,7 @@ export function ExplainSession() {
   }
 
   const currentQuestion = questions[questions.length - 1] ?? OPENER;
+  const headlineQuestion = streamingQuestion || currentQuestion;
   const shareCountdownWarning =
     sharing &&
     shareSecondsLeft !== null &&
@@ -278,11 +273,8 @@ export function ExplainSession() {
             On the table
           </p>
           <h2 className="mt-2 text-2xl font-semibold leading-snug text-slate-900">
-            {currentQuestion}
+            {headlineQuestion}
           </h2>
-          {liveInterimAi && (
-            <p className="mt-2 text-sm italic text-slate-400">{liveInterimAi}</p>
-          )}
           <p className="mt-2 text-sm text-slate-500">
             Answer whenever you get to it — you can keep explaining in the meantime.
           </p>
@@ -388,7 +380,7 @@ export function ExplainSession() {
           </p>
         )}
         <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4 text-sm">
-          {lines.length === 0 && !liveInterimUser && !liveInterimAi && (
+          {lines.length === 0 && !liveInterimUser && !streamingQuestion && (
             <p className="text-slate-400">Waiting for you to start talking…</p>
           )}
           {lines.map((line) => (
