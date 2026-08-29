@@ -24,7 +24,7 @@ export default function HomePage() {
                 Explain it rather than type it
               </Link>
               <p className="mt-2 text-xs text-slate-400">
-                Talk, type, or share your screen — then review the same form before submitting.
+                Talk with a voice agent, share your screen, then review the same form before submitting.
               </p>
             </div>
           </div>

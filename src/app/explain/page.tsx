@@ -18,9 +18,8 @@ export default function ExplainPage() {
               Explain it rather than type it
             </h1>
             <p className="mt-3 text-slate-500">
-              Start by introducing yourself, then talk through the work. Switch between
-              pause-based extraction and Gemini Live — both fill the same form. Share your
-              screen if pointing is easier.
+              Start by introducing yourself, then talk through the work with a voice agent.
+              It fills the same form as you go. Share your screen if pointing is easier.
             </p>
           </div>
           <ExplainSession />
